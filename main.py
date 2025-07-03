@@ -77,12 +77,6 @@ def get_cached_book_metadata(book_id: str):
 
 
 def log_in(library: str, username: str, password: str):
-    session.cookies.update(
-        {
-            "__config_PROD": "eyJsaWJyYXJ5X2luZm8iOnsibG9nbyI6Imh0dHBzOi8vaW1hZ2VzLnlvdXJjbG91ZGxpYnJhcnkuY29tL2RlbGl2ZXJ5L2ltZz9saWJyYXJ5SUQ9d21vM2YmdHlwZT1saWJyYXJ5IiwibmFtZSI6ImRlIEJpYiIsInVybCI6Imh0dHBzOi8vZWJvb2sueW91cmNsb3VkbGlicmFyeS5jb20vbGlicmFyeS9kZUJpYiIsInVybE5hbWUiOiJkZUJpYiJ9LCJsaWJyYXJ5X2NvbmZpZyI6eyJyZWFrdG9yX3BhdHJvbl9pZCI6MTcyNzYxMTEyfSwibG9naW5faW5mbyI6eyJiYXJjb2RlIjoiYWxkby5maWV1d0BnbWFpbC5jb20iLCJwaW4iOiIxdHdlZTNwaUBub0Vva0dlIiwibGlicmFyeSI6IjU1ZTVjM2M4ODIyNTQwZmJiNGU2NjFhMTU3ODQyYzRlIiwic3RhdGUiOiJCRS1WRUIifX0%3D.%2BIKYHr3QNCgRhn1WvqDbBQmWYegvdidN4dYVgpw6JOM"
-        }
-    )
-
     headers = BASE_HEADERS.copy()
     headers.update(
         {
@@ -103,10 +97,26 @@ def log_in(library: str, username: str, password: str):
         "library": library,
     }
 
-    url = "https://ebook.yourcloudlibrary.com/?_data=root"
-    response = session.post(url, headers=headers, data=data)
+    login_url = "https://ebook.yourcloudlibrary.com/?_data=root"
+    response = session.post(login_url, headers=headers, data=data)
+
+    if response.status_code not in (200, 204):
+        raise Exception(f"Login failed with status {response.status_code}")
 
     return response
+
+
+def check_login(library: str):
+    test_url = f"https://ebook.yourcloudlibrary.com/library/{library}/mybooks/current"
+    response = session.get(test_url, allow_redirects=False)
+
+    if response.is_redirect:
+        raise Exception("Login failed: redirect to login page detected")
+
+    if "__session_PROD" not in session.cookies.get_dict():
+        raise Exception("Login failed: __session_PROD cookie not set")
+
+    return True
 
 
 def list_loaned_books(library: str, form_data: dict = None) -> List[Dict]:
@@ -365,9 +375,7 @@ def download_book(loaned_book: dict, library: str, dump_json=False):
     return output_directory
 
 
-def download_books(
-    library, username, password, return_books=False, dump_json=False, media_id=None
-):
+def download_books(library, return_books=False, dump_json=False, media_id=None):
     """
     Download one or more audiobooks from CloudLibrary.
 
@@ -382,11 +390,6 @@ def download_books(
     Yields:
         str: Directory path where each downloaded audiobook is saved.
     """
-
-    # log in
-    login_json = log_in(library=library, username=username, password=password).json()
-    if "stack" in login_json:
-        raise Exception(login_json["stack"])
 
     # Cache all loaned books immediately after login
     cache_loaned_books(library)
@@ -440,21 +443,38 @@ if __name__ == "__main__":
     parser.add_argument(
         "--release", action="store_true", help="Return selected books after download"
     )
+    parser.add_argument(
+        "-c", "--cookie", type=str, help="Optional __session_PROD cookie to skip login"
+    )
 
     args = parser.parse_args()
 
     library = args.library or input("Enter library name: ")
-    username = args.username or input("Enter username / barcode: ")
 
-    if args.prompt_password or not args.password:
-        password = getpass.getpass("Enter password: ")
+    # TODO: get this from checking the site
+    session.cookies.set(
+        "__config_PROD",
+        "eyJsaWJyYXJ5X2luZm8iOnsibG9nbyI6Imh0dHBzOi8vaW1hZ2VzLnlvdXJjbG91ZGxpYnJhcnkuY29tL2RlbGl2ZXJ5L2ltZz9saWJyYXJ5SUQ9d21vM2YmdHlwZT1saWJyYXJ5IiwibmFtZSI6ImRlIEJpYiIsInVybCI6Imh0dHBzOi8vZWJvb2sueW91cmNsb3VkbGlicmFyeS5jb20vbGlicmFyeS9kZUJpYiIsInVybE5hbWUiOiJkZUJpYiJ9LCJsaWJyYXJ5X2NvbmZpZyI6eyJyZWFrdG9yX3BhdHJvbl9pZCI6MTcyNzYxMTEyfSwibG9naW5faW5mbyI6eyJiYXJjb2RlIjoiYWxkby5maWV1d0BnbWFpbC5jb20iLCJwaW4iOiIxMDBQZXJlbkVuR3JhbmF0ZW5HZSIsImxpYnJhcnkiOiI1NWU1YzNjODgyMjU0MGZiYjRlNjYxYTE1Nzg0MmM0ZSIsInN0YXRlIjoiQkUtVkVCIn19.fAPEZr%2Feuzh6pmVU9y9f2k%2FK1jserJpaSHj7aVbjlkk",
+    )
+
+    if args.cookie:
+        session.cookies.set("__session_PROD", args.cookie)
+        username = None
+        password = None
     else:
-        password = args.password
+        username = args.username or input("Enter username / barcode: ")
+        if args.prompt_password or not args.password:
+            password = getpass.getpass("Enter password: ")
+        else:
+            password = args.password
+        log_in(library=library, username=username, password=password)
+
+    # print("Login cookies:", session.cookies.get_dict())
+
+    check_login(library=library)
 
     for download in download_books(
         library=library,
-        username=username,
-        password=password,
         return_books=args.release,
         dump_json=args.dump_json,
         media_id=args.title,
