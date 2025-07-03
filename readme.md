@@ -33,7 +33,6 @@ pip install requests
 
 ```bash
 python3 main.py -l LIBRARY -u USERNAME -p PASSWORD
-python3 main.py -l deBib -u aldo.fieuw@gmail.com -p 1twee3pi@noEokGe
 ```
 
 ### Options:
