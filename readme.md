@@ -31,21 +31,33 @@ pip install requests
 
 ## ▶️ Usage
 
+You can authenticate using **two methods**:
+
+### 1. Login with username and password
+
 ```bash
-python3 main.py -l LIBRARY -u USERNAME -p PASSWORD
+python3 main.py -l LIBRARY -u USERNAME -p PASSWORD [OPTIONS]
 ```
+
+### 2. Skip login by providing an existing session cookie (__session_PROD)
+
+```
+python3 main.py -l LIBRARY -c COOKIE_VALUE [OPTIONS]
+```
+
 
 ### Options:
 
-| Argument             | Description |
-|----------------------|-------------|
-| `-l`, `--library`    | Name of the library (as seen in the URL) |
-| `-u`, `--username`   | Your barcode or login username |
-| `-p`, `--password`   | Your PIN or password |
-| `--prompt_password`  | Prompt for password input instead of using `-p` |
-| `-t`, `--title`      | Media ID of a specific title to download (optional) |
-| `--dump_json`        | Save full metadata as `.json` file |
-| `--release`          | Return the book(s) after downloading |
+| Argument            | Description                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| `-l`, `--library`   | Name of the library (as seen in the URL)                                                         |
+| `-u`, `--username`  | Your barcode or login username                                                                   |
+| `-p`, `--password`  | Your PIN or password                                                                             |
+| `--prompt_password` | Prompt for password input instead of using `-p`                                                  |
+| `-t`, `--title`     | Media ID of a specific title to download (optional)                                              |
+| `--dump_json`       | Save full metadata as `.json` file                                                               |
+| `--release`         | Return the book(s) after downloading                                                             |
+| `--c`, `--cookie`   | Optional `__session_PROD` cookie to skip login (if provided, username/password are not required) |
 
 ### Example:
 
