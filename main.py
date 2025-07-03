@@ -422,6 +422,15 @@ def download_books(library, return_books=False, dump_json=False, media_id=None):
             return_book(book_to_download["itemId"], library)
 
 
+def get_initial_cookies(library: str):
+    url = f"https://ebook.yourcloudlibrary.com/library/{library}/featured"
+    res = session.get(url)
+    cookies = session.cookies.get_dict()
+    if "__config_PROD" not in cookies:
+        raise Exception("__config_PROD cookie not found after initial request")
+    return cookies["__config_PROD"]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--library", type=str, help="Library name")
@@ -451,11 +460,8 @@ if __name__ == "__main__":
 
     library = args.library or input("Enter library name: ")
 
-    # TODO: get this from checking the site
-    session.cookies.set(
-        "__config_PROD",
-        "eyJsaWJyYXJ5X2luZm8iOnsibG9nbyI6Imh0dHBzOi8vaW1hZ2VzLnlvdXJjbG91ZGxpYnJhcnkuY29tL2RlbGl2ZXJ5L2ltZz9saWJyYXJ5SUQ9d21vM2YmdHlwZT1saWJyYXJ5IiwibmFtZSI6ImRlIEJpYiIsInVybCI6Imh0dHBzOi8vZWJvb2sueW91cmNsb3VkbGlicmFyeS5jb20vbGlicmFyeS9kZUJpYiIsInVybE5hbWUiOiJkZUJpYiJ9LCJsaWJyYXJ5X2NvbmZpZyI6eyJyZWFrdG9yX3BhdHJvbl9pZCI6MTcyNzYxMTEyfSwibG9naW5faW5mbyI6eyJiYXJjb2RlIjoiYWxkby5maWV1d0BnbWFpbC5jb20iLCJwaW4iOiIxMDBQZXJlbkVuR3JhbmF0ZW5HZSIsImxpYnJhcnkiOiI1NWU1YzNjODgyMjU0MGZiYjRlNjYxYTE1Nzg0MmM0ZSIsInN0YXRlIjoiQkUtVkVCIn19.fAPEZr%2Feuzh6pmVU9y9f2k%2FK1jserJpaSHj7aVbjlkk",
-    )
+    config_cookie = get_initial_cookies(library)
+    session.cookies.set("__config_PROD", config_cookie)
 
     if args.cookie:
         session.cookies.set("__session_PROD", args.cookie)
