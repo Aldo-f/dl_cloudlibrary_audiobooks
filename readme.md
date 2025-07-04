@@ -21,12 +21,6 @@ Make sure you have Python 3 and install dependencies:
 pip install -r requirements.txt
 ```
 
-Or just install `requests`:
-
-```bash
-pip install requests
-```
-
 ---
 
 ## ▶️ Usage
